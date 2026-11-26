@@ -23,16 +23,21 @@ public final class YinYangTimeline {
     public static final int OPEN_START = 36;
     public static final int OPEN_END = 84;
 
-    public static final int[] EMERGE_START = {92, 122};
-    public static final int EMERGE_LEN = 70;
-    public static final int GLIDE = 40;
-    public static final int READY = 200;
+    public static final int[] EMERGE_START = {92, 112};
+    /** เวลา (tick) ที่มังกรบินจากหน้าคัมภีร์จนเข้าวงโคจร */
+    public static final int EMERGE_FLIGHT = 100;
+    /** ช่วงที่มีเอฟเฟกต์น้ำ (วงน้ำ/หยดน้ำ) รอบปากรู */
+    public static final int EMERGE_FX = 34;
+    public static final int READY = 215;
     /** ถ้าไม่กดครั้งที่ 2 ภายในเวลานี้ มังกรกลับเข้าคัมภีร์/สกิลจบเอง */
     public static final int ORBIT_MAX = 1800;
+    /** ระยะเล็งไกลสุด (บล็อก) */
+    public static final double AIM_MAX = 320.0;
 
-    public static final int FLY = 36;
+    /** ระยะเวลาบินขั้นต่ำ/สูงสุด (tick) — จริงๆ คำนวณจากระยะถึงเป้า ดู flyTicks() */
+    public static final int FLY_MIN = 36;
+    public static final int FLY_MAX = 90;
     public static final int WAVE = 80;
-    public static final int STRIKE_END = FLY + WAVE + 70;
     public static final int FADE = 30;
 
     public static final double ORBIT_R = 26.0;
@@ -61,9 +66,24 @@ public final class YinYangTimeline {
         return k * k * (3 - 2 * k);
     }
 
-    /** รัศมีคลื่นทำลายล้าง ที่ s tick หลังกดครั้งที่ 2 */
-    public static double waveRadius(double s, double max) {
-        double x = clamp01((s - FLY) / WAVE);
+    /** smootherstep (ความเร่งต่อเนื่องกว่า smooth) */
+    public static double smoother(double k) {
+        k = clamp01(k);
+        return k * k * k * (k * (k * 6 - 15) + 10);
+    }
+
+    /** เวลาที่มังกรใช้พุ่งไปเป้า (tick) ยิ่งไกลยิ่งนาน */
+    public static int flyTicks(double dist) {
+        return (int) Math.max(FLY_MIN, Math.min(FLY_MAX, FLY_MIN + dist / 6.0));
+    }
+
+    public static int strikeEnd(int fly) {
+        return fly + WAVE + 70;
+    }
+
+    /** รัศมีคลื่นทำลายล้าง ที่ s tick หลังกดครั้งที่ 2 (fly = ระยะเวลาบิน) */
+    public static double waveRadius(double s, int fly, double max) {
+        double x = clamp01((s - fly) / WAVE);
         return max * (1.0 - Math.pow(1.0 - x, 2.2));
     }
 

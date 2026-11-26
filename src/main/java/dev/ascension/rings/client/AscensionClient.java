@@ -20,6 +20,7 @@ import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import dev.ascension.rings.AscensionMod;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.math.Vec3d;
 import org.lwjgl.glfw.GLFW;
 
@@ -63,7 +64,8 @@ public class AscensionClient implements ClientModInitializer {
             UUID id = buf.readUuid();
             Vec3d target = new Vec3d(buf.readDouble(), buf.readDouble(), buf.readDouble());
             double radius = buf.readDouble();
-            client.execute(() -> YinYangState.strike(id, target, radius));
+            int fly = buf.readInt();
+            client.execute(() -> YinYangState.strike(id, target, radius, fly));
         });
         ClientPlayNetworking.registerGlobalReceiver(Net.YY_END, (client, handler, buf, sender) -> {
             UUID id = buf.readUuid();
@@ -109,7 +111,16 @@ public class AscensionClient implements ClientModInitializer {
             while (YINYANG_KEY.wasPressed()) {
                 AscensionMod.LOGGER.info("Yin-Yang key pressed (screen={})", client.currentScreen);
                 if (client.player != null && client.currentScreen == null && !ClientState.isLocalActive() && !SwordState.isLocalActive()) {
-                    ClientPlayNetworking.send(Net.YY_ACTIVATE, PacketByteBufs.create());
+                    PacketByteBuf out = PacketByteBufs.create();
+                    // กดครั้งที่ 2 (มังกรโคจรอยู่) -> แนบจุดที่เล็งตามเมาส์ไปให้ server
+                    Vec3d aim = YinYangState.isLocalOrbiting() ? YinYangState.computeAim(client, 1.0f) : null;
+                    out.writeBoolean(aim != null);
+                    if (aim != null) {
+                        out.writeDouble(aim.x);
+                        out.writeDouble(aim.y);
+                        out.writeDouble(aim.z);
+                    }
+                    ClientPlayNetworking.send(Net.YY_ACTIVATE, out);
                 }
             }
             ClientState.tick(client);

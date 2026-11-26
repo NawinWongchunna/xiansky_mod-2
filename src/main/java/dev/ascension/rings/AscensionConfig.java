@@ -46,6 +46,8 @@ public final class AscensionConfig {
     public int yinYangCooldownTicks = 3600;
     /** แปลงพื้นผิวเป็นลายหยินหยางขาว-ดำ (concrete) หลังทำลาย */
     public boolean yinYangPaintGround = true;
+    /** ระยะเล็งไกลสุดที่ server ยอมรับ (บล็อก) */
+    public double yinYangMaxRange = 320.0;
 
     public static AscensionConfig get() {
         return instance;

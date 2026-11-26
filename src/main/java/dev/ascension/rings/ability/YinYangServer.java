@@ -50,6 +50,7 @@ public final class YinYangServer {
         Vec3d start;
         Vec3d book;
         Vec3d target;
+        int fly = YinYangTimeline.FLY_MIN;
     }
 
     private static final Map<UUID, Run> ACTIVE = new HashMap<>();
@@ -62,10 +63,10 @@ public final class YinYangServer {
     }
 
     /** ใช้ร่วมกันทั้งปุ่ม J และคำสั่ง /yinyang: ยังไม่เริ่ม = เริ่ม, กำลังโคจร = สั่งโจมตี */
-    public static void press(ServerPlayerEntity p) {
+    public static void press(ServerPlayerEntity p, Vec3d aim) {
         Run run = ACTIVE.get(p.getUuid());
         if (run == null) start(p);
-        else strike(p, run);
+        else strike(p, run, aim);
     }
 
     private static void start(ServerPlayerEntity p) {
@@ -88,27 +89,39 @@ public final class YinYangServer {
         sound(w, run.start.add(0, 2, 0), ModSounds.CHARGE, 3f, 1f);
     }
 
-    private static void strike(ServerPlayerEntity p, Run run) {
+    private static void strike(ServerPlayerEntity p, Run run, Vec3d aim) {
         if (run.s >= 0) return;
         if (run.t < YinYangTimeline.READY) {
             p.sendMessage(Text.translatable("message.ascension_rings.yinyang_not_ready").formatted(Formatting.GRAY), true);
             return;
         }
         ServerWorld w = p.getServerWorld();
-        Vec3d target;
-        HitResult hit = p.raycast(160.0, 1.0f, false);
-        if (hit.getType() == HitResult.Type.BLOCK) {
-            target = hit.getPos();
-        } else {
-            Vec3d look = p.getRotationVec(1.0f);
-            Vec3d flat = new Vec3d(look.x, 0, look.z);
-            flat = flat.lengthSquared() < 1.0e-4 ? new Vec3d(0, 0, 1) : flat.normalize();
-            double x = p.getX() + flat.x * 60, z = p.getZ() + flat.z * 60;
-            int bx = (int) Math.floor(x), bz = (int) Math.floor(z);
-            double y = w.isChunkLoaded(bx >> 4, bz >> 4) ? w.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, bx, bz) : p.getY();
-            target = new Vec3d(x, y, z);
+        double maxRange = Math.max(32.0, AscensionConfig.get().yinYangMaxRange);
+        Vec3d target = null;
+        if (aim != null && Double.isFinite(aim.x) && Double.isFinite(aim.y) && Double.isFinite(aim.z)) {
+            // จุดที่ client เล็ง (ตามเมาส์) — ตรวจระยะ/ความถูกต้องก่อนใช้
+            Vec3d from = p.getEyePos();
+            Vec3d d = aim.subtract(from);
+            if (d.length() > maxRange) aim = from.add(d.normalize().multiply(maxRange));
+            int bx = (int) Math.floor(aim.x), bz = (int) Math.floor(aim.z);
+            if (w.isChunkLoaded(bx >> 4, bz >> 4)) target = aim;
+        }
+        if (target == null) {
+            HitResult hit = p.raycast(maxRange, 1.0f, false);
+            if (hit.getType() == HitResult.Type.BLOCK) {
+                target = hit.getPos();
+            } else {
+                Vec3d look = p.getRotationVec(1.0f);
+                Vec3d flat = new Vec3d(look.x, 0, look.z);
+                flat = flat.lengthSquared() < 1.0e-4 ? new Vec3d(0, 0, 1) : flat.normalize();
+                double x = p.getX() + flat.x * 60, z = p.getZ() + flat.z * 60;
+                int bx = (int) Math.floor(x), bz = (int) Math.floor(z);
+                double y = w.isChunkLoaded(bx >> 4, bz >> 4) ? w.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, bx, bz) : p.getY();
+                target = new Vec3d(x, y, z);
+            }
         }
         run.target = target;
+        run.fly = YinYangTimeline.flyTicks(target.distanceTo(p.getPos()));
         run.s = 0;
         AscensionMod.LOGGER.info("Yin-Yang strike by {} at {}", p.getName().getString(), target);
         broadcast(p, run, Net.YY_STRIKE);
@@ -141,7 +154,7 @@ public final class YinYangServer {
             run.t++;
             if (run.s >= 0) run.s++;
             step(w, p, run);
-            boolean done = run.s >= YinYangTimeline.STRIKE_END || (run.s < 0 && run.t >= YinYangTimeline.ORBIT_MAX);
+            boolean done = (run.s >= 0 && run.s >= YinYangTimeline.strikeEnd(run.fly)) || (run.s < 0 && run.t >= YinYangTimeline.ORBIT_MAX);
             if (done) {
                 finish(w, p, run, true);
                 it.remove();
@@ -173,8 +186,8 @@ public final class YinYangServer {
             p.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 400, 4, false, false, false));
             p.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOW_FALLING, 400, 0, false, false, false));
         }
-        if (s == YinYangTimeline.FLY) impact(w, p, run);
-        if (s >= YinYangTimeline.FLY && s <= YinYangTimeline.FLY + YinYangTimeline.WAVE) wave(w, p, run);
+        if (s == run.fly) impact(w, p, run);
+        if (s >= run.fly && s <= run.fly + YinYangTimeline.WAVE) wave(w, p, run);
     }
 
     private static void impact(ServerWorld w, ServerPlayerEntity caster, Run run) {
@@ -190,8 +203,8 @@ public final class YinYangServer {
     private static void wave(ServerWorld w, ServerPlayerEntity caster, Run run) {
         AscensionConfig cfg = AscensionConfig.get();
         double maxR = cfg.yinYangRadius;
-        double r1 = Math.max(6.0, YinYangTimeline.waveRadius(run.s, maxR));
-        double r0 = run.s == YinYangTimeline.FLY ? -1.0 : YinYangTimeline.waveRadius(run.s - 1, maxR);
+        double r1 = Math.max(6.0, YinYangTimeline.waveRadius(run.s, run.fly, maxR));
+        double r0 = run.s == run.fly ? -1.0 : YinYangTimeline.waveRadius(run.s - 1, run.fly, maxR);
         if (r1 <= r0) return;
 
         Vec3d c = run.target;
@@ -290,6 +303,7 @@ public final class YinYangServer {
             } else if (channel == Net.YY_STRIKE) {
                 writeVec(buf, run.target);
                 buf.writeDouble(AscensionConfig.get().yinYangRadius);
+                buf.writeInt(run.fly);
             }
             ServerPlayNetworking.send(t, channel, buf);
         }

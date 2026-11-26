@@ -44,12 +44,18 @@ public final class YinYangHud {
             float pulse = 0.65f + 0.35f * (float) Math.sin(t * 0.15);
             ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.translatable("message.ascension_rings.yinyang_ready"),
                     w / 2, h - 62, argb(pulse, 0xF2E6B8));
+            net.minecraft.util.math.Vec3d aim = YinYangState.aimNow;
+            if (aim != null && mc.player != null) {
+                int dist = (int) Math.round(aim.distanceTo(mc.player.getPos()));
+                ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.literal(dist + " m"), w / 2, h - 50, argb(0.9f, 0xFFFFFF));
+            }
         }
 
         if (s >= 0f) {
-            float k = s - YinYangTimeline.FLY;
+            int fly = YinYangState.localFly();
+            float k = s - fly;
             // ก่อนระเบิด: ขอบจอสว่างขึ้นเล็กน้อย
-            float pre = Timeline.keys(s, 0, 0, YinYangTimeline.FLY, 0.25f);
+            float pre = Timeline.keys(s, 0, 0, fly, 0.25f);
             if (k < 0f && pre > 0.01f) ctx.fill(0, 0, w, h, argb(pre, 0xFFFFFF));
             if (k >= 0f) {
                 // แฟลชขาว -> วูบดำ -> เทาจางลง (โลกขาวดำ)

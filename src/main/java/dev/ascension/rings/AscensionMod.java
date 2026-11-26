@@ -10,6 +10,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.command.CommandManager;
+import net.minecraft.util.math.Vec3d;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,8 +32,11 @@ public class AscensionMod implements ModInitializer {
                         server.execute(() -> SwordServer.start(player)));
 
         ServerPlayNetworking.registerGlobalReceiver(Net.YY_ACTIVATE,
-                (server, player, handler, buf, responseSender) ->
-                        server.execute(() -> YinYangServer.press(player)));
+                (server, player, handler, buf, responseSender) -> {
+                    // ถ้ากดครั้งที่ 2 client จะแนบจุดที่เล็ง (ตามเมาส์) มาด้วย
+                    Vec3d aim = buf.readBoolean() ? new Vec3d(buf.readDouble(), buf.readDouble(), buf.readDouble()) : null;
+                    server.execute(() -> YinYangServer.press(player, aim));
+                });
 
         ServerTickEvents.END_SERVER_TICK.register(AscensionServer::tick);
         ServerTickEvents.END_SERVER_TICK.register(YinYangServer::tick);
@@ -60,7 +64,7 @@ public class AscensionMod implements ModInitializer {
         // /yinyang = สกิล J (เรียกครั้งแรก = เริ่ม, เรียกอีกครั้ง = สั่งโจมตีจุดที่เล็ง) ไว้ทดสอบ
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
                 dispatcher.register(CommandManager.literal("yinyang").requires(src -> src.hasPermissionLevel(2)).executes(ctx -> {
-                    YinYangServer.press(ctx.getSource().getPlayerOrThrow());
+                    YinYangServer.press(ctx.getSource().getPlayerOrThrow(), null);
                     return 1;
                 })));
 
