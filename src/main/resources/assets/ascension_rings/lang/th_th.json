@@ -1,0 +1,9 @@
+{
+  "key.ascension_rings.activate": "สกิลลอยตัว Ascension",
+  "key.ascension_rings.sword": "สกิลกระบี่แหวกมิติ Void Blade",
+  "key.categories.ascension_rings": "Ascension Rings",
+  "message.ascension_rings.cooldown": "สกิลยังคูลดาวน์ อีก %s วินาที",
+  "key.ascension_rings.yinyang": "คัมภีร์หยินหยาง (สกิล)",
+  "message.ascension_rings.yinyang_not_ready": "มังกรยังโผล่ออกมาไม่ครบ...",
+  "message.ascension_rings.yinyang_ready": "กด J อีกครั้งเพื่อสั่งมังกรโจมตีจุดที่เล็ง"
+}

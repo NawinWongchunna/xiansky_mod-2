@@ -1,0 +1,10 @@
+{
+  "yy_charge":        { "sounds": [ { "name": "ascension_rings:yy_charge",        "stream": false } ] },
+  "yy_scripture":     { "sounds": [ { "name": "ascension_rings:yy_scripture_open", "stream": false } ] },
+  "yy_dragon_white":  { "sounds": [ { "name": "ascension_rings:yy_dragon_white",  "stream": false } ] },
+  "yy_dragon_black":  { "sounds": [ { "name": "ascension_rings:yy_dragon_black",  "stream": false } ] },
+  "yy_whoosh":        { "sounds": [ { "name": "ascension_rings:yy_whoosh",        "stream": false } ] },
+  "yy_gong":          { "sounds": [ { "name": "ascension_rings:yy_gong",          "stream": false } ] },
+  "yy_explosion":     { "sounds": [ { "name": "ascension_rings:yy_explosion",     "stream": false } ] },
+  "yy_light_burst":   { "sounds": [ { "name": "ascension_rings:yy_light_burst",   "stream": false } ] }
+}
