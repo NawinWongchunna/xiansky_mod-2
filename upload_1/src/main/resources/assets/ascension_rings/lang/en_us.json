@@ -1,0 +1,9 @@
+{
+  "key.ascension_rings.activate": "Ascension (skill)",
+  "key.ascension_rings.sword": "Void Blade (skill)",
+  "key.categories.ascension_rings": "Ascension Rings",
+  "message.ascension_rings.cooldown": "Ascension cooldown: %s s",
+  "key.ascension_rings.yinyang": "Yin-Yang Scripture (skill)",
+  "message.ascension_rings.yinyang_not_ready": "The dragons are still emerging...",
+  "message.ascension_rings.yinyang_ready": "Press J again to command the dragons"
+}
