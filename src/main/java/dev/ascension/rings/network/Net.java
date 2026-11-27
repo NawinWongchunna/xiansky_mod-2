@@ -26,6 +26,8 @@ public final class Net {
     public static final Identifier YY_STRIKE = new Identifier(AscensionMod.MOD_ID, "yy_strike");
     /** server -> client : uuid */
     public static final Identifier YY_END = new Identifier(AscensionMod.MOD_ID, "yy_end");
+    /** S2C: int mode (0 = เริ่มพุ่งเข้าคัมภีร์, 1 = เข้าโลกหยินหยางแล้ว, 2 = ออกจากโลก) */
+    public static final Identifier YY_REALM = new Identifier(AscensionMod.MOD_ID, "yy_realm");
 
     private Net() {}
 }

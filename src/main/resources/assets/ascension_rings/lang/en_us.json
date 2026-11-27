@@ -5,5 +5,9 @@
   "message.ascension_rings.cooldown": "Ascension cooldown: %s s",
   "key.ascension_rings.yinyang": "Yin-Yang Scripture (skill)",
   "message.ascension_rings.yinyang_not_ready": "The dragons are still emerging...",
-  "message.ascension_rings.yinyang_ready": "Press J again to command the dragons"
+  "message.ascension_rings.yinyang_ready": "Press J to command the dragons  |  Shift+J to dive into the scripture",
+  "message.ascension_rings.yinyang_dive": "Dash into the Yin-Yang world",
+  "message.ascension_rings.yinyang_realm": "YIN-YANG REALM",
+  "message.ascension_rings.yinyang_leave": "Press J to leave this world",
+  "message.ascension_rings.yinyang_norealm": "The Yin-Yang realm is unavailable (dimension data not loaded)"
 }

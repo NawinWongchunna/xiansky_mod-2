@@ -19,12 +19,20 @@ public abstract class ClientWorldMixin {
     @Unique
     private static final Vec3d VOID_SKY = new Vec3d(0.07, 0.0, 0.10);
     @Unique
+    private static final Vec3d REALM_SKY = new Vec3d(0.015, 0.015, 0.03);
+    @Unique
+    private static final Vec3d REALM_CLOUD = new Vec3d(0.30, 0.30, 0.33);
+    @Unique
     private static final Vec3d MONO_SKY = new Vec3d(0.62, 0.62, 0.64);
 
     @Inject(method = "getSkyColor", at = @At("RETURN"), cancellable = true)
     private void ascension$sky(Vec3d cameraPos, float tickDelta, CallbackInfoReturnable<Vec3d> cir) {
         float k = ClientState.skyIntensity(tickDelta);
         float ks = SwordState.skyIntensity(tickDelta);
+        if (YinYangState.inRealm) {
+            cir.setReturnValue(REALM_SKY);
+            return;
+        }
         float ky = YinYangState.skyTone(tickDelta);
         if (k <= 0f && ks <= 0f && ky <= 0f) return;
         Vec3d c = cir.getReturnValue().multiply(1.0 - k).add(ASCENSION_SKY.multiply(k));
@@ -36,6 +44,10 @@ public abstract class ClientWorldMixin {
     private void ascension$clouds(float tickDelta, CallbackInfoReturnable<Vec3d> cir) {
         float k = ClientState.skyIntensity(tickDelta);
         float ks = SwordState.skyIntensity(tickDelta);
+        if (YinYangState.inRealm) {
+            cir.setReturnValue(REALM_CLOUD);
+            return;
+        }
         float ky = YinYangState.skyTone(tickDelta);
         if (k <= 0f && ks <= 0f && ky <= 0f) return;
         Vec3d c = cir.getReturnValue().multiply(1.0 - k * 0.8).add(ASCENSION_SKY.multiply(k * 1.5));

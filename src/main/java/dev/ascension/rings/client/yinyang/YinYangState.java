@@ -32,6 +32,8 @@ public final class YinYangState {
         public int fly = YinYangTimeline.FLY_MIN;
         /** tick ที่ได้รับ END / -1 = ยังไม่จบ */
         public int endAt = -1;
+        /** กำลังพุ่งเข้าไปในคัมภีร์ (Shift+J) */
+        public boolean diving = false;
 
         Instance(UUID uuid, Vec3d start, Vec3d book) {
             this.uuid = uuid;
@@ -67,6 +69,48 @@ public final class YinYangState {
 
     public static void clear() {
         ACTIVE.clear();
+        inRealm = false;
+        flash = 0;
+    }
+
+    // ---------- โลกหยินหยาง ----------
+
+    /** ผู้เล่นอยู่ในโลกหยินหยาง (ตั้งค่าทุก tick จากมิติของ ClientWorld) */
+    public static volatile boolean inRealm = false;
+    /** tick ตั้งแต่เข้าโลกหยินหยาง */
+    public static int realmTicks = 0;
+    /** แฟลชขาวตอนเข้า/ออกโลก: นับถอยหลัง (FLASH_MAX..0) */
+    public static int flash = 0;
+    public static final int FLASH_MAX = 50;
+
+    /** เซิร์ฟเวอร์แจ้ง: 0 = เริ่มพุ่งเข้าคัมภีร์, 1 = เข้าโลกแล้ว, 2 = ออกจากโลกแล้ว */
+    public static void realmEvent(int mode) {
+        if (mode == 0) {
+            Instance i = local();
+            if (i != null) i.diving = true;
+        } else {
+            ACTIVE.clear();
+            flash = FLASH_MAX;
+            if (mode == 1) realmTicks = 0;
+        }
+    }
+
+    /** 0..1 ความขาวของหน้าจอตอนพุ่งเข้าใกล้คัมภีร์ */
+    public static float diveWhite(float td) {
+        Instance i = local();
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (i == null || !i.diving || mc.player == null) return 0f;
+        double d = mc.player.getPos().add(0, 1, 0).distanceTo(i.book);
+        float k = (float) YinYangTimeline.clamp01(1.0 - (d - 4.5) / 22.0);
+        return k * k;
+    }
+
+    /** ตำแหน่งหัวมังกรยักษ์ในโลกหยินหยาง: วนรอบแท่น ขาว/ดำ ไล่กันแบบไท่จี๋ */
+    public static Vec3d realmHead(int i, double t) {
+        double ang = t * 0.0105 + i * Math.PI;
+        double rad = 100.0 + 9.0 * Math.sin(t * 0.017 + i * 1.7);
+        double y = 64.0 + 58.0 + 20.0 * Math.sin(t * 0.013 + i * Math.PI);
+        return new Vec3d(0.5 + Math.cos(ang) * rad, y, 0.5 + Math.sin(ang) * rad);
     }
 
     // ---------- queries ----------
@@ -156,9 +200,13 @@ public final class YinYangState {
         return Timeline.keys(t, 0, 0, 6, 1, 26, 1, 40, 0);
     }
 
-    /** ระนาบหน้าคัมภีร์ (ใช้ตัดตัวมังกรตอนพุ่งออกมา): ชี้จากคัมภีร์เข้าหาผู้ร่าย */
+    /**
+     * ระนาบหน้าคัมภีร์ (ใช้ตัดตัวมังกรตอนพุ่งออกมา และเป็นทิศหันหน้าของเล่ม): ชี้จากคัมภีร์เข้าหาผู้ร่าย
+     * ใช้ตำแหน่งตอนเริ่ม (นิ่ง) ไม่ใช่ตำแหน่งปัจจุบัน และกดแนวตั้งลงครึ่งหนึ่งให้เล่มตั้งตรง
+     */
     public static Vec3d pageNormal(Instance inst, Vec3d cp) {
-        Vec3d d = cp.add(0, 6, 0).subtract(inst.book);
+        Vec3d d = inst.start.add(0, 6, 0).subtract(inst.book);
+        d = new Vec3d(d.x, d.y * 0.35, d.z);
         return d.lengthSquared() < 1.0e-6 ? new Vec3d(0, 0, 1) : d.normalize();
     }
 
@@ -212,12 +260,18 @@ public final class YinYangState {
     // ---------- per tick ----------
 
     public static void tick(MinecraftClient mc) {
-        if (ACTIVE.isEmpty()) return;
         ClientWorld world = mc.world;
         if (world == null) {
-            clear();
+            if (!ACTIVE.isEmpty() || inRealm) clear();
             return;
         }
+        inRealm = dev.ascension.rings.YinYangRealm.isRealm(world);
+        if (flash > 0) flash--;
+        if (inRealm) {
+            realmTicks++;
+            realmParticles(world, mc);
+        }
+        if (ACTIVE.isEmpty()) return;
         Iterator<Instance> it = ACTIVE.values().iterator();
         while (it.hasNext()) {
             Instance inst = it.next();
@@ -225,6 +279,17 @@ public final class YinYangState {
             PlayerEntity p = world.getPlayerByUuid(inst.uuid);
             spawnParticles(world, inst, p);
             if (inst.endAt >= 0 && inst.ticks - inst.endAt > YinYangTimeline.FADE + 5) it.remove();
+        }
+    }
+
+    private static void realmParticles(ClientWorld w, MinecraftClient mc) {
+        if (mc.player == null) return;
+        Vec3d pp = mc.player.getPos();
+        for (int i = 0; i < 3; i++) {
+            boolean white = RNG.nextBoolean();
+            w.addParticle(white ? ParticleTypes.END_ROD : ParticleTypes.SQUID_INK,
+                    pp.x + (RNG.nextDouble() - 0.5) * 60, pp.y + RNG.nextDouble() * 26 - 2, pp.z + (RNG.nextDouble() - 0.5) * 60,
+                    0, 0.03 + RNG.nextDouble() * 0.04, 0);
         }
     }
 

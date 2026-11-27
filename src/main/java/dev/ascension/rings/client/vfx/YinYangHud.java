@@ -17,13 +17,43 @@ public final class YinYangHud {
         return (a << 24) | (rgb & 0xFFFFFF);
     }
 
-    public static void render(DrawContext ctx, float tickDelta) {
-        float t = YinYangState.localTime(tickDelta);
-        if (t < 0f) return;
+    /** โลกหยินหยาง: ขาวบังตอนพุ่งเข้าคัมภีร์, แฟลชตอนเข้า/ออก, ชื่อโลก + คำใบ้ปุ่มออก */
+    private static void renderRealmLayer(DrawContext ctx, MinecraftClient mc, int w, int h, float td) {
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        float dive = YinYangState.diveWhite(td);
+        if (dive > 0.01f) ctx.fill(0, 0, w, h, argb(dive, 0xFFFFFF));
+        if (YinYangState.flash > 0) {
+            float fl = Math.max(0f, (YinYangState.flash - td) / YinYangState.FLASH_MAX);
+            ctx.fill(0, 0, w, h, argb(fl * fl, 0xFFFFFF));
+        }
+        if (YinYangState.inRealm) {
+            float rt = YinYangState.realmTicks + td;
+            float titleA = Timeline.keys(rt, 20, 0, 45, 1, 110, 1, 150, 0);
+            if (titleA > 0.05f) {
+                ctx.getMatrices().push();
+                ctx.getMatrices().translate(w / 2f, h * 0.2f, 0f);
+                ctx.getMatrices().scale(2.4f, 2.4f, 1f);
+                ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.translatable("message.ascension_rings.yinyang_realm"), 0, 0, argb(titleA, 0xF2E6B8));
+                ctx.getMatrices().pop();
+            }
+            float hint = Timeline.keys(rt, 100, 0, 130, 0.8f);
+            if (hint > 0.02f) {
+                ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.translatable("message.ascension_rings.yinyang_leave"),
+                        w / 2, h - 62, argb(hint * (0.7f + 0.3f * (float) Math.sin(rt * 0.12)), 0xF2E6B8));
+            }
+        }
+        RenderSystem.disableBlend();
+    }
 
+    public static void render(DrawContext ctx, float tickDelta) {
         MinecraftClient mc = MinecraftClient.getInstance();
         int w = ctx.getScaledWindowWidth();
         int h = ctx.getScaledWindowHeight();
+        renderRealmLayer(ctx, mc, w, h, tickDelta);
+
+        float t = YinYangState.localTime(tickDelta);
+        if (t < 0f) return;
         float s = YinYangState.localStrikeTime(tickDelta);
 
         RenderSystem.enableBlend();
@@ -43,7 +73,9 @@ public final class YinYangHud {
         if (s < 0f && t >= YinYangTimeline.READY) {
             float pulse = 0.65f + 0.35f * (float) Math.sin(t * 0.15);
             ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.translatable("message.ascension_rings.yinyang_ready"),
-                    w / 2, h - 62, argb(pulse, 0xF2E6B8));
+                    w / 2, h - 74, argb(pulse, 0xF2E6B8));
+            ctx.drawCenteredTextWithShadow(mc.textRenderer, Text.translatable("message.ascension_rings.yinyang_dive"),
+                    w / 2, h - 62, argb(pulse * 0.9f, 0xCFE8FF));
             net.minecraft.util.math.Vec3d aim = YinYangState.aimNow;
             if (aim != null && mc.player != null) {
                 int dist = (int) Math.round(aim.distanceTo(mc.player.getPos()));

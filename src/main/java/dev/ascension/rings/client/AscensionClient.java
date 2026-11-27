@@ -67,6 +67,10 @@ public class AscensionClient implements ClientModInitializer {
             int fly = buf.readInt();
             client.execute(() -> YinYangState.strike(id, target, radius, fly));
         });
+        ClientPlayNetworking.registerGlobalReceiver(Net.YY_REALM, (client, handler, buf, sender) -> {
+            int mode = buf.readInt();
+            client.execute(() -> YinYangState.realmEvent(mode));
+        });
         ClientPlayNetworking.registerGlobalReceiver(Net.YY_END, (client, handler, buf, sender) -> {
             UUID id = buf.readUuid();
             client.execute(() -> YinYangState.end(id));
@@ -110,16 +114,20 @@ public class AscensionClient implements ClientModInitializer {
             }
             while (YINYANG_KEY.wasPressed()) {
                 AscensionMod.LOGGER.info("Yin-Yang key pressed (screen={})", client.currentScreen);
-                if (client.player != null && client.currentScreen == null && !ClientState.isLocalActive() && !SwordState.isLocalActive()) {
+                boolean realm = YinYangState.inRealm;
+                if (client.player != null && client.currentScreen == null
+                        && (realm || (!ClientState.isLocalActive() && !SwordState.isLocalActive()))) {
                     PacketByteBuf out = PacketByteBufs.create();
+                    boolean dive = !realm && client.options.sneakKey.isPressed() && YinYangState.isLocalOrbiting();
                     // กดครั้งที่ 2 (มังกรโคจรอยู่) -> แนบจุดที่เล็งตามเมาส์ไปให้ server
-                    Vec3d aim = YinYangState.isLocalOrbiting() ? YinYangState.computeAim(client, 1.0f) : null;
+                    Vec3d aim = (!dive && YinYangState.isLocalOrbiting()) ? YinYangState.computeAim(client, 1.0f) : null;
                     out.writeBoolean(aim != null);
                     if (aim != null) {
                         out.writeDouble(aim.x);
                         out.writeDouble(aim.y);
                         out.writeDouble(aim.z);
                     }
+                    out.writeByte(dive ? 1 : 0);
                     ClientPlayNetworking.send(Net.YY_ACTIVATE, out);
                 }
             }

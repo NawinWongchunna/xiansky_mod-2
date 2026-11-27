@@ -35,7 +35,8 @@ public class AscensionMod implements ModInitializer {
                 (server, player, handler, buf, responseSender) -> {
                     // ถ้ากดครั้งที่ 2 client จะแนบจุดที่เล็ง (ตามเมาส์) มาด้วย
                     Vec3d aim = buf.readBoolean() ? new Vec3d(buf.readDouble(), buf.readDouble(), buf.readDouble()) : null;
-                    server.execute(() -> YinYangServer.press(player, aim));
+                    int mode = buf.readableBytes() > 0 ? buf.readByte() : 0; // 1 = Shift+J พุ่งเข้าคัมภีร์
+                    server.execute(() -> YinYangServer.press(player, aim, mode));
                 });
 
         ServerTickEvents.END_SERVER_TICK.register(AscensionServer::tick);

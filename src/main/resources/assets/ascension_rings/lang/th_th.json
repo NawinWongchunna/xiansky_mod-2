@@ -5,5 +5,9 @@
   "message.ascension_rings.cooldown": "สกิลยังคูลดาวน์ อีก %s วินาที",
   "key.ascension_rings.yinyang": "คัมภีร์หยินหยาง (สกิล)",
   "message.ascension_rings.yinyang_not_ready": "มังกรยังโผล่ออกมาไม่ครบ...",
-  "message.ascension_rings.yinyang_ready": "กด J อีกครั้งเพื่อสั่งมังกรโจมตีจุดที่เล็ง"
+  "message.ascension_rings.yinyang_ready": "กด J สั่งมังกรโจมตี  |  กด Shift+J พุ่งเข้าไปในคัมภีร์",
+  "message.ascension_rings.yinyang_dive": "พุ่งเข้าสู่โลกหยินหยาง",
+  "message.ascension_rings.yinyang_realm": "โลกหยินหยาง",
+  "message.ascension_rings.yinyang_leave": "กด J เพื่อออกจากโลกนี้",
+  "message.ascension_rings.yinyang_norealm": "โลกหยินหยางใช้ไม่ได้ (ข้อมูล dimension ไม่ถูกโหลด)"
 }

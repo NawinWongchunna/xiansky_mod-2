@@ -3,6 +3,7 @@ package dev.ascension.rings.ability;
 import dev.ascension.rings.AscensionConfig;
 import dev.ascension.rings.AscensionMod;
 import dev.ascension.rings.ModSounds;
+import dev.ascension.rings.YinYangRealm;
 import dev.ascension.rings.YinYangTimeline;
 import dev.ascension.rings.network.Net;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
@@ -51,7 +52,26 @@ public final class YinYangServer {
         Vec3d book;
         Vec3d target;
         int fly = YinYangTimeline.FLY_MIN;
+        /** กำลังพุ่งเข้าไปในคัมภีร์ (โลกหยินหยาง) */
+        boolean dive = false;
+        int diveT = 0;
     }
+
+    /** ที่ที่ผู้เล่นมาจาก ใช้ส่งกลับตอนออกจากโลกหยินหยาง */
+    private static final class Origin {
+        final net.minecraft.registry.RegistryKey<net.minecraft.world.World> world;
+        final Vec3d pos;
+        final float yaw, pitch;
+
+        Origin(net.minecraft.registry.RegistryKey<net.minecraft.world.World> world, Vec3d pos, float yaw, float pitch) {
+            this.world = world;
+            this.pos = pos;
+            this.yaw = yaw;
+            this.pitch = pitch;
+        }
+    }
+
+    private static final Map<UUID, Origin> ORIGIN = new HashMap<>();
 
     private static final Map<UUID, Run> ACTIVE = new HashMap<>();
     private static final Map<UUID, Long> COOLDOWN = new HashMap<>();
@@ -63,10 +83,84 @@ public final class YinYangServer {
     }
 
     /** ใช้ร่วมกันทั้งปุ่ม J และคำสั่ง /yinyang: ยังไม่เริ่ม = เริ่ม, กำลังโคจร = สั่งโจมตี */
-    public static void press(ServerPlayerEntity p, Vec3d aim) {
+    public static void press(ServerPlayerEntity p, Vec3d aim, int mode) {
+        if (YinYangRealm.isRealm(p.getWorld())) {
+            exitRealm(p);
+            return;
+        }
         Run run = ACTIVE.get(p.getUuid());
         if (run == null) start(p);
+        else if (mode == 1) dive(p, run);
         else strike(p, run, aim);
+    }
+
+    public static void press(ServerPlayerEntity p, Vec3d aim) {
+        press(p, aim, 0);
+    }
+
+    /** Shift+J ขณะมังกรโคจร: พุ่งเข้าไปในคัมภีร์ */
+    private static void dive(ServerPlayerEntity p, Run run) {
+        if (run.s >= 0 || run.dive) return;
+        if (run.t < YinYangTimeline.READY) {
+            p.sendMessage(Text.translatable("message.ascension_rings.yinyang_not_ready").formatted(Formatting.GRAY), true);
+            return;
+        }
+        if (p.getServer() == null || p.getServer().getWorld(YinYangRealm.KEY) == null) {
+            p.sendMessage(Text.translatable("message.ascension_rings.yinyang_norealm").formatted(Formatting.RED), true);
+            return;
+        }
+        run.dive = true;
+        run.diveT = 0;
+        sendRealm(p, 0);
+        sound(p.getServerWorld(), p.getPos().add(0, 2, 0), ModSounds.WHOOSH, 4f, 1.4f);
+        sound(p.getServerWorld(), p.getPos().add(0, 2, 0), ModSounds.CHARGE, 4f, 1.6f);
+    }
+
+    private static void sendRealm(ServerPlayerEntity p, int mode) {
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeInt(mode);
+        ServerPlayNetworking.send(p, Net.YY_REALM, buf);
+    }
+
+    private static void enterRealm(MinecraftServer server, ServerPlayerEntity p, Run run) {
+        ServerWorld realm = server.getWorld(YinYangRealm.KEY);
+        if (realm == null) return;
+        YinYangRealm.ensureBuilt(realm);
+        ORIGIN.put(p.getUuid(), new Origin(p.getServerWorld().getRegistryKey(), run.start, p.getYaw(), p.getPitch()));
+        broadcast(p, run, Net.YY_END);
+        Vec3d sp = YinYangRealm.spawn();
+        p.fallDistance = 0;
+        p.teleport(realm, sp.x, sp.y, sp.z, 0f, 5f);
+        p.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 200, 4, false, false, false));
+        sendRealm(p, 1);
+        sound(realm, sp.add(0, 2, 0), ModSounds.GONG, 4f, 0.7f);
+        sound(realm, sp.add(0, 2, 0), ModSounds.SCRIPTURE, 4f, 0.8f);
+        AscensionMod.LOGGER.info("{} entered the Yin-Yang realm", p.getName().getString());
+    }
+
+    public static void exitRealm(ServerPlayerEntity p) {
+        MinecraftServer server = p.getServer();
+        if (server == null) return;
+        Origin o = ORIGIN.remove(p.getUuid());
+        ServerWorld dest = o == null ? null : server.getWorld(o.world);
+        Vec3d pos;
+        float yaw = p.getYaw(), pitch = p.getPitch();
+        if (dest == null) {
+            dest = server.getOverworld();
+            net.minecraft.util.math.BlockPos sp = dest.getSpawnPos();
+            pos = new Vec3d(sp.getX() + 0.5, dest.getTopY(Heightmap.Type.MOTION_BLOCKING, sp.getX(), sp.getZ()), sp.getZ() + 0.5);
+        } else {
+            pos = o.pos;
+            yaw = o.yaw;
+            pitch = o.pitch;
+        }
+        p.fallDistance = 0;
+        p.teleport(dest, pos.x, pos.y, pos.z, yaw, pitch);
+        p.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOW_FALLING, 200, 0, false, false, false));
+        p.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 200, 4, false, false, false));
+        COOLDOWN.put(p.getUuid(), dest.getTime() + AscensionConfig.get().yinYangCooldownTicks / 2);
+        sendRealm(p, 2);
+        sound(dest, pos.add(0, 2, 0), ModSounds.LIGHT_BURST, 4f, 1.2f);
     }
 
     private static void start(ServerPlayerEntity p) {
@@ -90,7 +184,7 @@ public final class YinYangServer {
     }
 
     private static void strike(ServerPlayerEntity p, Run run, Vec3d aim) {
-        if (run.s >= 0) return;
+        if (run.s >= 0 || run.dive) return;
         if (run.t < YinYangTimeline.READY) {
             p.sendMessage(Text.translatable("message.ascension_rings.yinyang_not_ready").formatted(Formatting.GRAY), true);
             return;
@@ -135,6 +229,13 @@ public final class YinYangServer {
     }
 
     public static void tick(MinecraftServer server) {
+        // ผู้เล่นในโลกหยินหยาง: ตกขอบแท่น = ส่งกลับ
+        ServerWorld realm = server.getWorld(YinYangRealm.KEY);
+        if (realm != null && !realm.getPlayers().isEmpty()) {
+            for (ServerPlayerEntity rp : new java.util.ArrayList<>(realm.getPlayers())) {
+                if (rp.getY() < 30) exitRealm(rp);
+            }
+        }
         if (ACTIVE.isEmpty()) return;
         Iterator<Map.Entry<UUID, Run>> it = ACTIVE.entrySet().iterator();
         while (it.hasNext()) {
@@ -152,6 +253,13 @@ public final class YinYangServer {
                 continue;
             }
             run.t++;
+            if (run.dive) {
+                if (diveTick(server, p, run)) {
+                    it.remove();
+                    continue;
+                }
+                continue;
+            }
             if (run.s >= 0) run.s++;
             step(w, p, run);
             boolean done = (run.s >= 0 && run.s >= YinYangTimeline.strikeEnd(run.fly)) || (run.s < 0 && run.t >= YinYangTimeline.ORBIT_MAX);
@@ -163,6 +271,27 @@ public final class YinYangServer {
     }
 
     // ------------------------------------------------------------------
+
+    /** พุ่งเข้าหาคัมภีร์ คืน true เมื่อเข้าโลกหยินหยางแล้ว (run ถูกใช้จบ) */
+    private static boolean diveTick(MinecraftServer server, ServerPlayerEntity p, Run run) {
+        run.diveT++;
+        Vec3d to = run.book.subtract(p.getPos().add(0, 1.0, 0));
+        double dist = to.length();
+        if (dist < 4.5 || run.diveT > 110) {
+            enterRealm(server, p, run);
+            return true;
+        }
+        double speed = Math.min(2.4, 0.5 + run.diveT * 0.14);
+        Vec3d v = to.normalize().multiply(Math.min(speed, dist));
+        p.fallDistance = 0;
+        // หันหน้าเข้าหาคัมภีร์ค่อยๆ (สมูท) เพื่อให้เห็นตอนพุ่งเข้าไป
+        float ty = (float) (Math.toDegrees(Math.atan2(-to.x, to.z)));
+        float tp = (float) (-Math.toDegrees(Math.atan2(to.y, Math.hypot(to.x, to.z))));
+        float yaw = p.getYaw() + net.minecraft.util.math.MathHelper.wrapDegrees(ty - p.getYaw()) * 0.18f;
+        float pitch = p.getPitch() + (tp - p.getPitch()) * 0.18f;
+        p.networkHandler.requestTeleport(p.getX() + v.x, p.getY() + v.y, p.getZ() + v.z, yaw, pitch);
+        return false;
+    }
 
     private static void step(ServerWorld w, ServerPlayerEntity p, Run run) {
         int t = run.t;
