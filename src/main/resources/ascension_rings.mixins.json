@@ -8,7 +8,8 @@
     "GameRendererMixin",
     "ClientWorldMixin",
     "KeyboardInputMixin",
-    "PlayerModelMixin"
+    "PlayerModelMixin",
+    "PlayerRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 0

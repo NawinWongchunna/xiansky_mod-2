@@ -22,60 +22,67 @@ final class NineStepModel {
 
     private NineStepModel() {}
 
-    // ------------------------------------------------------------------ แท่นก้าว
+    // ------------------------------------------------------------------ แท่นก้าว (หมอก + ระลอกน้ำ ไม่ใช่แผ่นแข็ง)
 
     /**
-     * @param step 0..8 (ก้าวที่ 1..9)
-     * @param r    รัศมี
-     * @param time tick
+     * จุดเหยียบแบบ "เหยียบหมอก/ผิวน้ำ": จานหมอกไล่ระดับโปร่งแสง + เส้นหมอกก้นหอยลอยพลิ้ว
+     * + ระลอกคลื่นแผ่ออกจากเท้า + อักขระบางๆ ลอยเหนือผิว + ละอองแสงลอยขึ้น — ไม่มีขอบหนา/กลีบ/เพชรใหญ่
+     * ใช้วาดในชั้น additive (GLOW)
+     * @param age tick นับจากตอนเหยียบ (ใช้ขยายระลอก)
      */
-    static void ring(Mesh m, Vec3d c, double r, double rot, int step, double time, float alpha) {
+    static void mist(Mesh m, Vec3d c, double r, double rot, int step, double time, double age, float alpha) {
         float old = m.alpha;
-        // จานโปร่งขาว
-        m.alpha = alpha * 0.30f;
-        m.disc(c, FX, FY, r * 0.95, 0, Math.PI * 2, 48, WHITE, 0.9f);
-        m.alpha = alpha;
-        // ปากั้ว (ก้าวสุดท้ายมีไท่จี๋กลาง)
-        SymbolModel.bagua(m, c.add(0, 0.03, 0), FX, FY, r, rot, 0.95, step >= 8);
-
-        // ขอบทองหนา (แถบตั้ง)
-        int seg = 48;
-        double h = 0.10 + 0.012 * step;
-        for (int j = 0; j < seg; j++) {
-            double a0 = 2 * Math.PI * j / seg, a1 = 2 * Math.PI * (j + 1) / seg;
-            Vec3d d0 = new Vec3d(Math.cos(a0), 0, Math.sin(a0)), d1 = new Vec3d(Math.cos(a1), 0, Math.sin(a1));
-            m.v(c.add(d0.multiply(r)).add(0, -h, 0), d0, GOLD, 0.7f);
-            m.v(c.add(d1.multiply(r)).add(0, -h, 0), d1, GOLD, 0.7f);
-            m.v(c.add(d1.multiply(r)).add(0, h, 0), d1, GOLD, 0.7f);
-            m.v(c.add(d0.multiply(r)).add(0, h, 0), d0, GOLD, 0.7f);
-        }
-
-        // กลีบบัวชูขึ้นจากขอบ (จำนวน/ความสูงเพิ่มตามก้าว)
-        boolean old2 = m.twoSided;
+        boolean ts = m.twoSided;
         m.twoSided = true;
-        int petals = 6 + step;
-        double ph = 0.45 + 0.17 * step;
-        for (int i = 0; i < petals; i++) {
-            double a = 2 * Math.PI * i / petals + rot * 0.4;
-            double w = Math.PI / petals * 0.8;
-            Vec3d b0 = c.add(Math.cos(a - w) * r * 0.97, 0.05, Math.sin(a - w) * r * 0.97);
-            Vec3d b1 = c.add(Math.cos(a + w) * r * 0.97, 0.05, Math.sin(a + w) * r * 0.97);
-            Vec3d tip = c.add(Math.cos(a) * r * 0.72, ph * (0.85 + 0.15 * Math.sin(time * 0.15 + i)), Math.sin(a) * r * 0.72);
-            Vec3d mid = Mesh.lerp(Mesh.lerp(b0, b1, 0.5), tip, 0.5).add(Math.cos(a) * r * 0.1, 0, Math.sin(a) * r * 0.1);
-            m.tri(b0, mid, tip, null, i % 2 == 0 ? WHITE : PALE, 0.8f);
-            m.tri(mid, b1, tip, null, i % 2 == 0 ? PALE : WHITE, 0.8f);
-        }
-        m.twoSided = old2;
 
-        // เพชรโคจร
-        int n = Math.min(14, 3 + step * 1);
-        for (int i = 0; i < n; i++) {
-            double a = rot * 2.2 + 2 * Math.PI * i / n;
-            double rr = r * (1.08 + 0.05 * Math.sin(time * 0.1 + i));
-            Vec3d p = c.add(Math.cos(a) * rr, 0.45 + 0.2 * Math.sin(time * 0.2 + i), Math.sin(a) * rr);
-            double s = 0.2 + 0.015 * step;
-            m.gem(p, UP.multiply(s * 1.7), FX.multiply(s), FY.multiply(s), i % 2 == 0 ? WHITE : GOLD, 1f);
+        // 1) จานหมอกไล่ระดับ (กลางเข้ม ขอบจางหาย)
+        int bands = 8;
+        for (int b = 0; b < bands; b++) {
+            double r0 = r * b / bands, r1 = r * (b + 1) / bands, k = (b + 0.5) / bands;
+            m.alpha = alpha * (float) (0.34 * Math.pow(1.0 - k, 1.7) + 0.015);
+            m.annulus(c.add(0, 0.04, 0), FX, FY, r0, r1, 0, Math.PI * 2, 40, k < 0.5 ? WHITE : PALE, 1f);
         }
+
+        // 2) เส้นหมอกก้นหอย (ผ้าบางๆ ตั้งขึ้น) หมุนช้าๆ
+        for (int w = 0; w < 8; w++) {
+            Vec3d[] pts = new Vec3d[10];
+            for (int i = 0; i < pts.length; i++) {
+                double u = i / 9.0;
+                double ang = rot * 0.7 + w * Math.PI * 2 / 8 + u * 2.4;
+                double rad = r * (0.12 + 0.88 * u);
+                double y = 0.06 + 0.35 * Math.sin(Math.PI * u) * (0.6 + 0.4 * Math.sin(time * 0.08 + w)) + 0.05 * u;
+                pts[i] = c.add(Math.cos(ang) * rad, y, Math.sin(ang) * rad);
+            }
+            m.alpha = alpha * 0.28f;
+            m.ribbon(pts, UP, 0.45, 0.03, w % 2 == 0 ? WHITE : PALE, 1f);
+        }
+
+        // 3) ระลอกน้ำแผ่ออกจากจุดที่เหยียบ
+        for (int j = 0; j < 3; j++) {
+            double a = age - j * 6;
+            if (a < 0) continue;
+            double rr = 0.5 + a * 0.16;
+            double fade = 1.0 - Math.min(1.0, a / 46.0);
+            if (rr > r * 1.7 || fade <= 0) continue;
+            m.alpha = alpha * (float) (0.75 * fade * fade);
+            m.annulus(c.add(0, 0.07, 0), FX, FY, rr, rr + 0.09 + 0.004 * a, 0, Math.PI * 2, 56, WHITE, 1f);
+        }
+
+        // 4) อักขระบางๆ ลอยเหนือผิว (จางๆ ไม่ใช่แผ่นทึบ)
+        m.alpha = alpha * 0.4f;
+        SymbolModel.bagua(m, c.add(0, 0.09, 0), FX, FY, r * 0.8, rot, 0.45, step >= 8);
+
+        // 5) ละอองแสงลอยขึ้น
+        int n = 6 + step;
+        for (int i = 0; i < n; i++) {
+            double a = i * 2.399 + rot;
+            double rad = r * (0.2 + 0.7 * hash(i, 9));
+            double h = ((time * 0.02 + hash(i, 10)) % 1.0) * 2.2;
+            m.alpha = alpha * (float) (1.0 - h / 2.2);
+            double sz = 0.05 + 0.04 * hash(i, 11);
+            m.gem(c.add(Math.cos(a) * rad, 0.15 + h, Math.sin(a) * rad), UP.multiply(sz * 1.6), FX.multiply(sz), FY.multiply(sz), i % 2 == 0 ? WHITE : GOLD, 1f);
+        }
+        m.twoSided = ts;
         m.alpha = old;
     }
 

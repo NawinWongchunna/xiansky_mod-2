@@ -7,7 +7,7 @@ public final class NineStepTimeline {
     /** แหวกมิติเปิดตรงหน้า + ท่าเตรียม */
     public static final int LEAD = 16;
     /** tick ต่อ 1 ก้าว */
-    public static final int STEP = 8;
+    public static final int STEP = 9;
     public static final int STEPS = 9;
     /** หยุดลอยรวมพลังที่ก้าวที่ 9 */
     public static final int CHARGE = 14;
@@ -17,13 +17,13 @@ public final class NineStepTimeline {
     public static final int LAND_FX = 34;
     public static final int FADE = 24;
     public static final int MIN_DASH_TICKS = 26;
-    public static final int MAX_DASH_TICKS = 90;
+    public static final int MAX_DASH_TICKS = 100;
 
     /** ระยะราบ/ระยะสูงต่อก้าว */
-    public static final double STEP_H = 3.4;
-    public static final double STEP_V = 1.15;
+    public static final double STEP_H = 6.5;
+    public static final double STEP_V = 1.4;
     /** รอยแหวกอยู่ห่างจากก้าวที่ 9 กี่บล็อก */
-    public static final double RIFT_AHEAD = 8.0;
+    public static final double RIFT_AHEAD = 12.0;
 
     private NineStepTimeline() {}
 
@@ -36,7 +36,7 @@ public final class NineStepTimeline {
     }
 
     public static int dashTicks(double dist) {
-        return (int) Math.max(MIN_DASH_TICKS, Math.min(MAX_DASH_TICKS, Math.round(dist / 4.0)));
+        return (int) Math.max(MIN_DASH_TICKS, Math.min(MAX_DASH_TICKS, Math.round(dist / 3.6)));
     }
 
     public static double clamp01(double v) {
@@ -75,7 +75,7 @@ public final class NineStepTimeline {
             return s9.add(0, 0.18 * Math.sin((t - stepsEnd()) * 0.35), 0);
         }
         double u = clamp01((t - dashStart()) / dashT);
-        double e = Math.pow(u, 1.9);
+        double e = Math.pow(u, 1.6);
         return s9.add(end.subtract(s9).multiply(e));
     }
 }

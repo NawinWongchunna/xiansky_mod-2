@@ -1,5 +1,6 @@
 package dev.ascension.rings.mixin;
 
+import dev.ascension.rings.client.nine.NineStepState;
 import dev.ascension.rings.client.sword.SwordState;
 import dev.ascension.rings.client.yinyang.YinYangState;
 import net.minecraft.client.MinecraftClient;
@@ -25,6 +26,19 @@ public abstract class PlayerModelMixin<T extends LivingEntity> extends BipedEnti
                                     float headYaw, float headPitch, CallbackInfo ci) {
         if (!(entity instanceof PlayerEntity player)) return;
         float td = MinecraftClient.getInstance().getTickDelta();
+        // ท่าพุ่ง (V): แขนทั้งสองไคว่ไปด้านหลังแบบนินจา
+        float dk = NineStepState.dashPose(player.getUuid(), td);
+        if (dk > 0f) {
+            float back = 1.55f;
+            this.rightArm.pitch += (back - this.rightArm.pitch) * dk;
+            this.leftArm.pitch += (back - this.leftArm.pitch) * dk;
+            this.rightArm.yaw *= (1f - dk);
+            this.leftArm.yaw *= (1f - dk);
+            this.rightArm.roll += (0.14f - this.rightArm.roll) * dk;
+            this.leftArm.roll += (-0.14f - this.leftArm.roll) * dk;
+            ((PlayerEntityModel<?>) (Object) this).rightSleeve.copyTransform(this.rightArm);
+            ((PlayerEntityModel<?>) (Object) this).leftSleeve.copyTransform(this.leftArm);
+        }
         float k = Math.max(SwordState.armRaise(player.getUuid(), td), YinYangState.armRaise(player.getUuid(), td));
         if (k <= 0f) return;
         float target = (float) (-Math.PI * 0.93);

@@ -81,7 +81,7 @@ public final class NineStepRenderer {
                 float a = (float) (sm((t - ti + 6) / 6.0) * (1.0 - sm((t - (ds + 6)) / 34.0)));
                 if (a > 0.01f) {
                     Vec3d c = NineStepTimeline.stair(in.start, dir, i).add(0, 0.06, 0);
-                    NineStepModel.ring(SOLID, c, 1.6 + 0.11 * i, i * 0.3 + t * 0.012, Math.max(0, Math.min(8, i - 1)), t, a);
+                    NineStepModel.mist(GLOW, c, 2.6 + 0.12 * i, i * 0.3 + t * 0.012, Math.max(0, Math.min(8, i - 1)), t, Math.max(0, t - ti), a);
                 }
                 if (i < NineStepTimeline.STEPS) {
                     double tg = L + i * S + S * 0.5;

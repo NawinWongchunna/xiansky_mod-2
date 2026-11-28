@@ -177,15 +177,9 @@ public final class NineStepServer {
                 sound(w, p.getPos().add(0, 1, 0), ModSounds.WHOOSH, 6f, 1.5f);
             }
 
-            Vec3d pos = NineStepTimeline.pos(run.start, run.dir, run.end, run.dashT, Math.min(t, run.tEnd));
-            if (!run.turned && run.dir != null) {
-                run.turned = true;
-                float yaw = (float) Math.toDegrees(Math.atan2(-run.dir.x, run.dir.z));
-                p.networkHandler.requestTeleport(pos.x, pos.y, pos.z, yaw, p.getPitch());
-            } else {
-                // ย้ายตำแหน่งอย่างเดียว ปล่อยให้ผู้เล่นหมุนกล้องได้อิสระ
-                p.networkHandler.requestTeleport(pos.x, pos.y, pos.z, 0f, 0f, EnumSet.of(PositionFlag.X_ROT, PositionFlag.Y_ROT));
-            }
+            // การเคลื่อนที่ทำฝั่ง client ตามสูตรเวลาเดียวกัน (กล้องหมุนอิสระ ไม่มีแพ็กเก็ตเทเลพอร์ตรัวๆ)
+            // server แค่ปิดการชนบล็อกฝั่ง server เพื่อไม่ให้เด้งกลับ "moved wrongly" ตอนพุ่งผ่านภูมิประเทศ
+            p.noClip = true;
             p.setVelocity(Vec3d.ZERO);
             p.fallDistance = 0;
 
@@ -203,7 +197,10 @@ public final class NineStepServer {
         if (run.jump) {
             p.teleport(dw, l.x, l.y, l.z, p.getYaw(), p.getPitch());
         } else {
-            p.networkHandler.requestTeleport(l.x, l.y, l.z, 0f, 0f, EnumSet.of(PositionFlag.X_ROT, PositionFlag.Y_ROT));
+            // ปกติ client พามาถึงจุดลงจอดเองแล้ว ถ้าคลาดเกิน 6 บล็อก (แลค) ค่อยดึงเข้าที่
+            if (p.getPos().distanceTo(l) > 6.0) {
+                p.networkHandler.requestTeleport(l.x, l.y, l.z, 0f, 0f, EnumSet.of(PositionFlag.X_ROT, PositionFlag.Y_ROT));
+            }
         }
         restore(p, run);
         p.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOW_FALLING, 100, 0, false, false, false));
@@ -234,6 +231,7 @@ public final class NineStepServer {
     }
 
     private static void restore(ServerPlayerEntity p, Run run) {
+        p.noClip = p.isSpectator();
         p.setNoGravity(false);
         p.setInvulnerable(run.wasInvulnerable);
         p.fallDistance = 0;

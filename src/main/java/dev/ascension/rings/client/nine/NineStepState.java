@@ -106,6 +106,33 @@ public final class NineStepState {
             }
             particles(w, dim, i);
         }
+        drive(mc, dim);
+    }
+
+    /**
+     * ขยับตัวละครของเราเองตามเส้นทางเดียวกับ server (client-authoritative) -> สมูท กล้องหมุนอิสระ
+     * ไม่ขยับเมื่ออยู่คนละมิติ และโหมดวาร์ปหยุดก่อนถึงเวลา server วาร์ป 2 tick กันตำแหน่งตีกัน
+     */
+    private static void drive(MinecraftClient mc, Identifier dim) {
+        Instance i = local();
+        if (i == null || mc.player == null || !dim.equals(i.srcDim)) return;
+        double t = i.ticks;
+        double stop = i.jump ? i.tLand() - 2 : i.tLand();
+        if (t > stop) return;
+        Vec3d p = i.casterPos(t);
+        mc.player.setPosition(p.x, p.y, p.z);
+        mc.player.setVelocity(Vec3d.ZERO);
+        mc.player.fallDistance = 0f;
+    }
+
+    /** ท่าพุ่งของผู้เล่นคนนี้ 0..1 (แขนไคว่หลัง ตัวเอนไปข้างหน้า) */
+    public static float dashPose(UUID id, float td) {
+        Instance i = ACTIVE.get(id);
+        if (i == null) return 0f;
+        float t = i.ticks + td;
+        float ds = NineStepTimeline.dashStart();
+        float tl = i.tLand();
+        return (float) (NineStepTimeline.smoother((t - (ds - 3f)) / 5f) * (1.0 - NineStepTimeline.smoother((t - (tl - 2f)) / 6f)));
     }
 
     private static void particles(ClientWorld w, Identifier dim, Instance i) {
@@ -119,6 +146,19 @@ public final class NineStepState {
                 w.addParticle(k % 3 == 0 ? ParticleTypes.FIREWORK : ParticleTypes.END_ROD,
                         p.x + (RNG.nextDouble() - 0.5) * 1.2, p.y + (RNG.nextDouble() - 0.5) * 1.6, p.z + (RNG.nextDouble() - 0.5) * 1.2,
                         (RNG.nextDouble() - 0.5) * 0.06, (RNG.nextDouble() - 0.2) * 0.06, (RNG.nextDouble() - 0.5) * 0.06);
+            }
+            // หมอกพวยพุ่งตอนเหยียบแต่ละก้าว
+            for (int s = 0; s <= NineStepTimeline.STEPS; s++) {
+                int ts = s == 0 ? 3 : NineStepTimeline.LEAD + s * NineStepTimeline.STEP;
+                if (t != ts) continue;
+                Vec3d c = NineStepTimeline.stair(i.start, i.dir, s);
+                for (int k = 0; k < 16; k++) {
+                    double a = k * Math.PI * 2 / 16 + RNG.nextDouble() * 0.3, sp = 0.08 + RNG.nextDouble() * 0.08;
+                    w.addParticle(ParticleTypes.CLOUD, c.x, c.y + 0.1, c.z, Math.cos(a) * sp, 0.01 + RNG.nextDouble() * 0.02, Math.sin(a) * sp);
+                }
+                for (int k = 0; k < 6; k++) {
+                    w.addParticle(ParticleTypes.END_ROD, c.x + (RNG.nextDouble() - 0.5), c.y + 0.1, c.z + (RNG.nextDouble() - 0.5), 0, 0.04 + RNG.nextDouble() * 0.05, 0);
+                }
             }
             // ละอองทองหลุดจากวงอักขระของแต่ละก้าว
             if (t >= NineStepTimeline.LEAD && t < ds && t % 2 == 0) {
