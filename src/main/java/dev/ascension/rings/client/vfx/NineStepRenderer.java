@@ -232,33 +232,33 @@ public final class NineStepRenderer {
     private static void drawFlares(AscensionRenderer.Frame f, NineStepState.Instance in, double t, float out, boolean src, boolean dest) {
         final int ds = NineStepTimeline.dashStart();
         final int tl = in.tLand();
-        AscensionRenderer.Batch g = new AscensionRenderer.Batch(FLARE, true, f);
-        boolean any = false;
+        // Batch เปิด buffer ทันทีที่สร้าง -> สร้างเฉพาะเมื่อมีแฟลร์ให้วาดจริง ไม่งั้น buffer ค้างแล้วเฟรมถัดไปพัง
+        AscensionRenderer.Batch g = null;
         boolean casterHere = t < tl ? src : dest;
         if (casterHere) {
             Vec3d p = in.casterPos(t).add(0, 1.0, 0);
             double base = sm((t - NineStepTimeline.LEAD) / 10.0) * (1.0 - sm((t - tl) / 10.0));
             double size = 2.0 + 3.0 * sm((t - NineStepTimeline.stepsEnd()) / 10.0) + (t >= ds && t < tl ? 5.0 : 0.0);
             if (base > 0.02) {
+                if (g == null) g = new AscensionRenderer.Batch(FLARE, true, f);
                 g.billboard(p, size, t * 0.03, (float) (0.5 * base) * out);
-                any = true;
             }
         }
         if (src) {
             Vec3d gate = NineStepTimeline.riftFoot(in.start, in.dir).add(0, 1.6, 0);
             double gOpen = sm((t - 2) / NineStepTimeline.LEAD) * (1.0 - sm((t - (ds + (in.jump ? in.dashT : 8))) / 16.0));
             if (gOpen > 0.02) {
+                if (g == null) g = new AscensionRenderer.Batch(FLARE, true, f);
                 g.billboard(gate, 7.0 * gOpen, t * 0.02, (float) (0.55 * gOpen) * out);
-                any = true;
             }
         }
         if (dest) {
             double k = t - tl;
             if (k >= 0 && k < 18) {
+                if (g == null) g = new AscensionRenderer.Batch(FLARE, true, f);
                 g.billboard(in.landing.add(0, 1.2, 0), 14.0 * (1.0 - k / 18.0) + 3.0, t * 0.05, (float) (1.0 - k / 18.0) * out);
-                any = true;
             }
         }
-        if (any) g.end();
+        if (g != null) g.end();
     }
 }

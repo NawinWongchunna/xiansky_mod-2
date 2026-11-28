@@ -61,7 +61,7 @@ public final class AscensionConfig {
     public double nineStepMaxFlight = 420.0;
 
     /** เวอร์ชันของ config (v2 = คูลดาวน์ทุกสกิล 5 วินาที) */
-    public int configVersion = 2;
+    public int configVersion = 0;
 
     public static AscensionConfig get() {
         return instance;
@@ -72,15 +72,13 @@ public final class AscensionConfig {
         try {
             if (Files.exists(path)) {
                 AscensionConfig loaded = GSON.fromJson(Files.readString(path), AscensionConfig.class);
-                if (loaded != null) {
-                    instance = loaded;
-                    if (loaded.configVersion < 2) { // config เก่า: บังคับคูลดาวน์ 5 วินาทีหนึ่งครั้ง
-                        instance.cooldownTicks = 100;
-                        instance.swordCooldownTicks = 100;
-                        instance.yinYangCooldownTicks = 100;
-                        instance.configVersion = 2;
-                    }
-                }
+                if (loaded != null) instance = loaded;
+            }
+            if (instance.configVersion < 2) { // config เก่า (ไม่มีฟิลด์นี้): บังคับคูลดาวน์ 5 วินาทีหนึ่งครั้ง
+                instance.cooldownTicks = 100;
+                instance.swordCooldownTicks = 100;
+                instance.yinYangCooldownTicks = 100;
+                instance.configVersion = 2;
             }
             Files.writeString(path, GSON.toJson(instance));
         } catch (Exception e) {
