@@ -1,6 +1,7 @@
 package dev.ascension.rings;
 
 import dev.ascension.rings.ability.AscensionServer;
+import dev.ascension.rings.ability.NineStepServer;
 import dev.ascension.rings.ability.SwordServer;
 import dev.ascension.rings.ability.YinYangServer;
 import dev.ascension.rings.network.Net;
@@ -39,13 +40,21 @@ public class AscensionMod implements ModInitializer {
                     server.execute(() -> YinYangServer.press(player, aim, mode));
                 });
 
+        ServerPlayNetworking.registerGlobalReceiver(Net.NS_ACTIVATE,
+                (server, player, handler, buf, responseSender) -> {
+                    Vec3d aim = buf.readBoolean() ? new Vec3d(buf.readDouble(), buf.readDouble(), buf.readDouble()) : null;
+                    server.execute(() -> NineStepServer.press(player, aim));
+                });
+
         ServerTickEvents.END_SERVER_TICK.register(AscensionServer::tick);
+        ServerTickEvents.END_SERVER_TICK.register(NineStepServer::tick);
         ServerTickEvents.END_SERVER_TICK.register(YinYangServer::tick);
         ServerTickEvents.END_SERVER_TICK.register(SwordServer::tick);
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             AscensionServer.abort(handler.player);
             SwordServer.abort(handler.player);
             YinYangServer.abort(handler.player);
+            NineStepServer.abort(handler.player);
         });
 
         // /ascension  = ใช้สกิลโดยไม่ต้องกดปุ่ม (ไว้ทดสอบ)
@@ -68,6 +77,23 @@ public class AscensionMod implements ModInitializer {
                     YinYangServer.press(ctx.getSource().getPlayerOrThrow(), null);
                     return 1;
                 })));
+
+        // /lift <x y z> [dimension] = สกิล V: แหวกมิติ -> เก้าก้าวย่างอากาศ -> พุ่งไปโผล่ที่พิกัด (รองรับ ~ และข้ามมิติ)
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+                dispatcher.register(CommandManager.literal("lift").requires(src -> src.hasPermissionLevel(2))
+                        .then(CommandManager.argument("pos", net.minecraft.command.argument.Vec3ArgumentType.vec3())
+                                .executes(ctx -> {
+                                    var src = ctx.getSource();
+                                    Vec3d pos = net.minecraft.command.argument.Vec3ArgumentType.getVec3(ctx, "pos");
+                                    return NineStepServer.begin(src.getPlayerOrThrow(), pos, src.getWorld()) ? 1 : 0;
+                                })
+                                .then(CommandManager.argument("dimension", net.minecraft.command.argument.DimensionArgumentType.dimension())
+                                        .executes(ctx -> {
+                                            var src = ctx.getSource();
+                                            Vec3d pos = net.minecraft.command.argument.Vec3ArgumentType.getVec3(ctx, "pos");
+                                            var dim = net.minecraft.command.argument.DimensionArgumentType.getDimensionArgument(ctx, "dimension");
+                                            return NineStepServer.begin(src.getPlayerOrThrow(), pos, dim) ? 1 : 0;
+                                        })))));
 
         LOGGER.info("Ascension Rings loaded");
     }

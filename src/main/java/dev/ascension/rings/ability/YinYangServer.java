@@ -165,7 +165,7 @@ public final class YinYangServer {
 
     private static void start(ServerPlayerEntity p) {
         UUID id = p.getUuid();
-        if (AscensionServer.isActive(id) || SwordServer.isActive(id) || !p.isAlive() || p.isSpectator()) return;
+        if (AscensionServer.isActive(id) || SwordServer.isActive(id) || NineStepServer.isActive(id) || !p.isAlive() || p.isSpectator()) return;
         ServerWorld w = p.getServerWorld();
         long now = w.getTime();
         Long until = COOLDOWN.get(id);

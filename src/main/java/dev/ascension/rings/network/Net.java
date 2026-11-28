@@ -29,5 +29,12 @@ public final class Net {
     /** S2C: int mode (0 = เริ่มพุ่งเข้าคัมภีร์, 1 = เข้าโลกหยินหยางแล้ว, 2 = ออกจากโลก) */
     public static final Identifier YY_REALM = new Identifier(AscensionMod.MOD_ID, "yy_realm");
 
+    /** C2S: boolean hasAim (+ 3 double) */
+    public static final Identifier NS_ACTIVATE = new Identifier(AscensionMod.MOD_ID, "ns_activate");
+    /** S2C: uuid, srcDim, destDim, start, dir, end(landing หรือ ปลายบันได), dashTicks, jump, landing */
+    public static final Identifier NS_START = new Identifier(AscensionMod.MOD_ID, "ns_start");
+    /** S2C: uuid (ยกเลิกกลางคัน) */
+    public static final Identifier NS_END = new Identifier(AscensionMod.MOD_ID, "ns_end");
+
     private Net() {}
 }

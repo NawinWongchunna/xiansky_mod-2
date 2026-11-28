@@ -2,6 +2,7 @@ package dev.ascension.rings.mixin;
 
 import dev.ascension.rings.client.ClientState;
 import dev.ascension.rings.client.camera.CameraEffects;
+import dev.ascension.rings.client.nine.NineStepState;
 import dev.ascension.rings.client.sword.SwordCamera;
 import dev.ascension.rings.client.sword.SwordState;
 import net.minecraft.client.render.Camera;
@@ -16,6 +17,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class GameRendererMixin {
     @Inject(method = "getFov", at = @At("RETURN"), cancellable = true)
     private void ascension$fov(Camera camera, float tickDelta, boolean changingFov, CallbackInfoReturnable<Double> cir) {
+        float nb = NineStepState.fovBoost(tickDelta);
+        if (nb > 0.01f) {
+            cir.setReturnValue(cir.getReturnValue() + nb);
+            return;
+        }
         float t = ClientState.cinematicTime(tickDelta);
         if (t >= 0) {
             cir.setReturnValue(cir.getReturnValue() + CameraEffects.fov(t));

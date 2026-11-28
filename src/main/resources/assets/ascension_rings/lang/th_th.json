@@ -9,5 +9,8 @@
   "message.ascension_rings.yinyang_dive": "พุ่งเข้าสู่โลกหยินหยาง",
   "message.ascension_rings.yinyang_realm": "โลกหยินหยาง",
   "message.ascension_rings.yinyang_leave": "กด J เพื่อออกจากโลกนี้",
-  "message.ascension_rings.yinyang_norealm": "โลกหยินหยางใช้ไม่ได้ (ข้อมูล dimension ไม่ถูกโหลด)"
+  "message.ascension_rings.yinyang_norealm": "โลกหยินหยางใช้ไม่ได้ (ข้อมูล dimension ไม่ถูกโหลด)",
+  "key.ascension_rings.ninestep": "เก้าก้าวย่างอากาศ (สกิล)",
+  "message.ascension_rings.ninestep_title": "เก้าก้าวย่างอากาศ",
+  "message.ascension_rings.ninestep_step": "ก้าวที่ %s / %s"
 }

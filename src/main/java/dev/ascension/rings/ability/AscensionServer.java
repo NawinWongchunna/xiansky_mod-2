@@ -40,7 +40,7 @@ public final class AscensionServer {
     }
 
     public static void start(ServerPlayerEntity player) {
-        if (SwordServer.isActive(player.getUuid()) || YinYangServer.isActive(player.getUuid())) return;
+        if (SwordServer.isActive(player.getUuid()) || YinYangServer.isActive(player.getUuid()) || NineStepServer.isActive(player.getUuid())) return;
         dev.ascension.rings.AscensionMod.LOGGER.info("Ascension start requested by {}", player.getName().getString());
         if (ACTIVE.containsKey(player.getUuid()) || !player.isAlive() || player.isSpectator()) return;
 

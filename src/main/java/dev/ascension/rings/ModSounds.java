@@ -16,6 +16,12 @@ public final class ModSounds {
     public static final SoundEvent EXPLOSION = reg("yy_explosion");
     public static final SoundEvent LIGHT_BURST = reg("yy_light_burst");
 
+    public static final SoundEvent NS_BELL = reg("ns_bell");
+    public static final SoundEvent NS_RIFT = reg("ns_rift");
+    public static final SoundEvent NS_CHOIR = reg("ns_choir");
+    public static final SoundEvent NS_DASH = reg("ns_dash");
+    public static final SoundEvent NS_BOOM = reg("ns_boom");
+
     private ModSounds() {}
 
     private static SoundEvent reg(String name) {

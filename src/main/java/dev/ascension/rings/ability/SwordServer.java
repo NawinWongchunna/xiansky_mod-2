@@ -60,7 +60,7 @@ public final class SwordServer {
 
     public static void start(ServerPlayerEntity p) {
         UUID id = p.getUuid();
-        if (ACTIVE.containsKey(id) || AscensionServer.isActive(id) || YinYangServer.isActive(id) || !p.isAlive() || p.isSpectator()) return;
+        if (ACTIVE.containsKey(id) || AscensionServer.isActive(id) || YinYangServer.isActive(id) || NineStepServer.isActive(id) || !p.isAlive() || p.isSpectator()) return;
         AscensionMod.LOGGER.info("Void Blade start requested by {}", p.getName().getString());
 
         ServerWorld w = p.getServerWorld();

@@ -9,5 +9,8 @@
   "message.ascension_rings.yinyang_dive": "Dash into the Yin-Yang world",
   "message.ascension_rings.yinyang_realm": "YIN-YANG REALM",
   "message.ascension_rings.yinyang_leave": "Press J to leave this world",
-  "message.ascension_rings.yinyang_norealm": "The Yin-Yang realm is unavailable (dimension data not loaded)"
+  "message.ascension_rings.yinyang_norealm": "The Yin-Yang realm is unavailable (dimension data not loaded)",
+  "key.ascension_rings.ninestep": "Nine-Step Void Walk (skill)",
+  "message.ascension_rings.ninestep_title": "NINE-STEP VOID WALK",
+  "message.ascension_rings.ninestep_step": "Step %s / %s"
 }

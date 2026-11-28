@@ -19,7 +19,7 @@ public final class AscensionConfig {
     /** รัศมีดาเมจ (บล็อก) */
     public double radius = 14.0;
     /** คูลดาวน์ (tick) 400 = 20 วินาที */
-    public int cooldownTicks = 400;
+    public int cooldownTicks = 100;
 
     // ---- สกิล G (Void Blade) ----
     /** รัศมีคลื่นทำลายล้าง (บล็อก) */
@@ -27,7 +27,7 @@ public final class AscensionConfig {
     /** ดาเมจต่อสิ่งมีชีวิตที่คลื่นผ่าน */
     public float swordDamage = 80.0f;
     /** คูลดาวน์ (tick) 2400 = 2 นาที */
-    public int swordCooldownTicks = 2400;
+    public int swordCooldownTicks = 100;
     /** ทำลายบล็อก (ปิดได้ถ้าไม่ต้องการ grief) */
     public boolean destroyBlocks = true;
     /** เปลี่ยนสภาพอากาศเป็นพายุฝนฟ้าคะนอง */
@@ -42,12 +42,26 @@ public final class AscensionConfig {
     public double yinYangRadius = 100.0;
     /** ดาเมจต่อสิ่งมีชีวิตที่คลื่นผ่าน */
     public float yinYangDamage = 200.0f;
-    /** คูลดาวน์ (tick) 3600 = 3 นาที */
-    public int yinYangCooldownTicks = 3600;
+    /** คูลดาวน์ (tick) 100 = 5 วินาที */
+    public int yinYangCooldownTicks = 100;
     /** แปลงพื้นผิวเป็นลายหยินหยางขาว-ดำ (concrete) หลังทำลาย */
     public boolean yinYangPaintGround = true;
     /** ระยะเล็งไกลสุดที่ server ยอมรับ (บล็อก) */
     public double yinYangMaxRange = 320.0;
+
+    // ---- สกิล V (Nine-Step / เก้าก้าวย่างอากาศ) ----
+    public int nineStepCooldownTicks = 100;
+    /** ดาเมจคลื่นกระแทกตอนลงจอด (0 = ปิด) */
+    public float nineStepDamage = 10.0f;
+    /** ระยะเล็งไกลสุดของปุ่ม V (บล็อก) */
+    public double nineStepMaxRange = 400.0;
+    /** ระยะพุ่งต่ำสุดของปุ่ม V (เล็งใกล้กว่านี้จะพุ่งไกลถึงระยะนี้) */
+    public double nineStepMinDash = 64.0;
+    /** /lift ที่ไกลกว่านี้ (หรือข้ามมิติ) จะเปลี่ยนเป็นพุ่งเข้ารอยแหวกแล้ววาร์ป */
+    public double nineStepMaxFlight = 420.0;
+
+    /** เวอร์ชันของ config (v2 = คูลดาวน์ทุกสกิล 5 วินาที) */
+    public int configVersion = 2;
 
     public static AscensionConfig get() {
         return instance;
@@ -58,7 +72,15 @@ public final class AscensionConfig {
         try {
             if (Files.exists(path)) {
                 AscensionConfig loaded = GSON.fromJson(Files.readString(path), AscensionConfig.class);
-                if (loaded != null) instance = loaded;
+                if (loaded != null) {
+                    instance = loaded;
+                    if (loaded.configVersion < 2) { // config เก่า: บังคับคูลดาวน์ 5 วินาทีหนึ่งครั้ง
+                        instance.cooldownTicks = 100;
+                        instance.swordCooldownTicks = 100;
+                        instance.yinYangCooldownTicks = 100;
+                        instance.configVersion = 2;
+                    }
+                }
             }
             Files.writeString(path, GSON.toJson(instance));
         } catch (Exception e) {

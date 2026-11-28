@@ -1,6 +1,9 @@
 package dev.ascension.rings.client;
 
+import dev.ascension.rings.client.nine.NineStepState;
 import dev.ascension.rings.client.sword.SwordState;
+import dev.ascension.rings.client.vfx.NineStepHud;
+import dev.ascension.rings.client.vfx.NineStepRenderer;
 import dev.ascension.rings.client.vfx.AscensionHud;
 import dev.ascension.rings.client.vfx.AscensionRenderer;
 import dev.ascension.rings.client.vfx.SwordHud;
@@ -33,6 +36,8 @@ public class AscensionClient implements ClientModInitializer {
     public static KeyBinding SWORD_KEY;
     /** ปุ่มสกิล Yin-Yang Scripture = J (กดครั้งแรกเรียกมังกร กดอีกครั้งสั่งโจมตีจุดที่เล็ง) */
     public static KeyBinding YINYANG_KEY;
+    /** ปุ่มสกิล Nine-Step (เก้าก้าวย่างอากาศ) = V */
+    public static KeyBinding NINESTEP_KEY;
 
     @Override
     public void onInitializeClient() {
@@ -53,6 +58,28 @@ public class AscensionClient implements ClientModInitializer {
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_J,
                 "key.categories.ascension_rings"));
+
+        NINESTEP_KEY = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.ascension_rings.ninestep",
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_V,
+                "key.categories.ascension_rings"));
+
+        ClientPlayNetworking.registerGlobalReceiver(Net.NS_START, (client, handler, buf, sender) -> {
+            UUID id = buf.readUuid();
+            net.minecraft.util.Identifier src = buf.readIdentifier(), dest = buf.readIdentifier();
+            Vec3d start = new Vec3d(buf.readDouble(), buf.readDouble(), buf.readDouble());
+            Vec3d dir = new Vec3d(buf.readDouble(), buf.readDouble(), buf.readDouble());
+            Vec3d end = new Vec3d(buf.readDouble(), buf.readDouble(), buf.readDouble());
+            Vec3d landing = new Vec3d(buf.readDouble(), buf.readDouble(), buf.readDouble());
+            int dashT = buf.readInt();
+            boolean jump = buf.readBoolean();
+            client.execute(() -> NineStepState.start(id, src, dest, start, dir, end, landing, dashT, jump));
+        });
+        ClientPlayNetworking.registerGlobalReceiver(Net.NS_END, (client, handler, buf, sender) -> {
+            UUID id = buf.readUuid();
+            client.execute(() -> NineStepState.end(id));
+        });
 
         ClientPlayNetworking.registerGlobalReceiver(Net.YY_START, (client, handler, buf, sender) -> {
             UUID id = buf.readUuid();
@@ -131,7 +158,24 @@ public class AscensionClient implements ClientModInitializer {
                     ClientPlayNetworking.send(Net.YY_ACTIVATE, out);
                 }
             }
+            while (NINESTEP_KEY.wasPressed()) {
+                AscensionMod.LOGGER.info("Nine-Step key pressed (screen={})", client.currentScreen);
+                if (client.player != null && client.currentScreen == null && !YinYangState.inRealm
+                        && !ClientState.isLocalActive() && !SwordState.isLocalActive() && !NineStepState.isLocalActive()) {
+                    PacketByteBuf out = PacketByteBufs.create();
+                    // เล็งตามจุดเมาส์ (ไกลสุด 320) — server จะบังคับพุ่งอย่างน้อยตามระยะต่ำสุดใน config
+                    Vec3d aim = YinYangState.computeAim(client, 1.0f);
+                    out.writeBoolean(aim != null);
+                    if (aim != null) {
+                        out.writeDouble(aim.x);
+                        out.writeDouble(aim.y);
+                        out.writeDouble(aim.z);
+                    }
+                    ClientPlayNetworking.send(Net.NS_ACTIVATE, out);
+                }
+            }
             ClientState.tick(client);
+            NineStepState.tick(client);
             SwordState.tick(client);
             YinYangState.tick(client);
         });
@@ -139,13 +183,16 @@ public class AscensionClient implements ClientModInitializer {
         WorldRenderEvents.AFTER_TRANSLUCENT.register(AscensionRenderer::render);
         WorldRenderEvents.AFTER_TRANSLUCENT.register(SwordRenderer::render);
         WorldRenderEvents.AFTER_TRANSLUCENT.register(YinYangRenderer::render);
+        WorldRenderEvents.AFTER_TRANSLUCENT.register(NineStepRenderer::render);
         HudRenderCallback.EVENT.register(AscensionHud::render);
         HudRenderCallback.EVENT.register(SwordHud::render);
         HudRenderCallback.EVENT.register(YinYangHud::render);
+        HudRenderCallback.EVENT.register(NineStepHud::render);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ClientState.clear();
             SwordState.clear();
             YinYangState.clear();
+            NineStepState.clear();
         });
     }
 
