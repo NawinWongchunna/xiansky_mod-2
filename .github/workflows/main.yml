@@ -38,3 +38,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: build/libs/*.jar
+
+      - name: อัปเดต Release "latest" อัตโนมัติ (ให้ดาวน์โหลดไฟล์ล่าสุดด้วยลิงก์ตายตัว)
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          JAR=$(ls build/libs/ascension-rings-*.jar | grep -v -- '-sources' | head -n 1)
+          cp "$JAR" build/libs/ascension-rings.jar
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest build/libs/ascension-rings.jar --title "Latest build" --notes "Auto-built from ${{ github.sha }}" --target ${{ github.sha }}
