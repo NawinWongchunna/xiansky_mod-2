@@ -125,6 +125,28 @@ public final class NineStepState {
         mc.player.fallDistance = 0f;
     }
 
+    /**
+     * ท่าเดินบนอากาศ: {phase 0..1 ภายในก้าว, ด้านของขาที่ก้าว (+1 ขวา / -1 ซ้าย), ความแรง 0..1} หรือ null ถ้าไม่ได้เดิน
+     */
+    public static float[] stepWalk(UUID id, float td) {
+        Instance i = ACTIVE.get(id);
+        if (i == null) return null;
+        float t = i.ticks + td;
+        float end = NineStepTimeline.stepsEnd();
+        float strength = (float) (NineStepTimeline.smoother((t - (NineStepTimeline.LEAD - 4f)) / 6f)
+                * (1.0 - NineStepTimeline.smoother((t - end) / 8f)));
+        if (strength <= 0.001f) return null;
+        float k = (t - NineStepTimeline.LEAD) / NineStepTimeline.STEP;
+        if (k < 0f) k = 0f;
+        int idx = (int) Math.floor(k);
+        float f = k - idx;
+        if (idx >= NineStepTimeline.STEPS) {
+            idx = NineStepTimeline.STEPS - 1;
+            f = 1f;
+        }
+        return new float[]{f, (idx % 2 == 0) ? 1f : -1f, strength};
+    }
+
     /** ท่าพุ่งของผู้เล่นคนนี้ 0..1 (แขนไคว่หลัง ตัวเอนไปข้างหน้า) */
     public static float dashPose(UUID id, float td) {
         Instance i = ACTIVE.get(id);
